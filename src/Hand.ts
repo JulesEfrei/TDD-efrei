@@ -47,6 +47,11 @@ export class HandClass implements HandInterface {
       return flush;
     }
 
+    const straight = this.isStraight(boardHand, playerHand);
+    if (straight) {
+      return straight;
+    }
+
     return boardHand;
   }
 
@@ -178,6 +183,12 @@ export class HandClass implements HandInterface {
     }
 
     return bestFlush;
+  }
+
+  isStraight(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    return this.getBestStraightFromCards(allCards);
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
