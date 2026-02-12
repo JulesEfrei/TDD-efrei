@@ -7,7 +7,7 @@ import {
   Rank,
 } from "./Deck";
 
-enum HandCategories {
+export enum HandCategories {
   BestCard = 0,
   OnePair = 1,
   TwoPair = 2,
@@ -67,7 +67,7 @@ export class HandClass implements HandInterface {
       return onePair;
     }
 
-    return boardHand;
+    return this.isBestCard(boardHand, playerHand);
   }
 
   isFourOfAKind(
@@ -326,6 +326,13 @@ export class HandClass implements HandInterface {
     }
 
     return [...pairCards, ...kickers];
+  }
+
+  isBestCard(boardHand: BoardHand, playerHand: PlayerHand): Deck {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+
+    return allCards.sort((a, b) => b.rank - a.rank).slice(0, 5);
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
