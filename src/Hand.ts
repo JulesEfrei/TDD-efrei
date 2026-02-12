@@ -78,6 +78,26 @@ export class HandClass implements HandInterface {
     return { quads, kicker };
   }
 
+    isFullHouse(boardHand: BoardHand, playerHand: PlayerHand): boolean {
+        const allCards = [...boardHand, ...playerHand];
+
+        const counts: { [key: number]: number } = {};
+        allCards.forEach(card => {
+            counts[card.rank] = (counts[card.rank] || 0) + 1;
+        });
+
+        const countsValues = Object.values(counts);
+
+        if (countsValues.some(count => count === 4)) {
+            return false;
+        }
+
+        const threeCount = countsValues.filter(count => count >= 3).length;
+        const pairCount = countsValues.filter(count => count >= 2).length;
+
+        return threeCount >= 1 && pairCount >= 2;
+    }
+
   isStraightFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
     this.areHandValid(boardHand, playerHand);
     const allCards = [...boardHand, ...playerHand];
