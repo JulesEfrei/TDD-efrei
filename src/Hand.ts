@@ -62,6 +62,11 @@ export class HandClass implements HandInterface {
       return twoPair;
     }
 
+    const onePair = this.isOnePair(boardHand, playerHand);
+    if (onePair) {
+      return onePair;
+    }
+
     return boardHand;
   }
 
@@ -282,6 +287,45 @@ export class HandClass implements HandInterface {
     }
 
     return [...selectedPairs, kicker];
+  }
+
+  isOnePair(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    const rankCounts = new Map<number, number>();
+
+    for (const card of allCards) {
+      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
+    }
+
+    const pairRanks = Array.from(rankCounts.entries())
+      .filter(([, count]) => count >= 2)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (pairRanks.length === 0) {
+      return null;
+    }
+
+    const bestPairRank = pairRanks[0]!;
+    const pairCards = allCards
+      .filter((card) => card.rank === bestPairRank)
+      .slice(0, 2);
+
+    if (pairCards.length !== 2) {
+      return null;
+    }
+
+    const kickers = allCards
+      .filter((card) => card.rank !== bestPairRank)
+      .sort((a, b) => b.rank - a.rank)
+      .slice(0, 3);
+
+    if (kickers.length !== 3) {
+      return null;
+    }
+
+    return [...pairCards, ...kickers];
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
