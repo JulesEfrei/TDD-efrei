@@ -23,51 +23,61 @@ interface HandInterface {
   checkBestPlayerHand: (boardHand: BoardHand, playerHand: PlayerHand) => Deck;
 }
 
+type HandContext = {
+  allCards: Card[];
+  rankCounts: Map<number, number>;
+  cardsByRank: Map<number, Card[]>;
+  cardsBySuit: Map<Suit, Card[]>;
+  cardsBySuitSorted: Map<Suit, Card[]>;
+  sortedByRankDesc: Card[];
+};
+
 export class HandClass implements HandInterface {
   checkBestPlayerHand(boardHand: BoardHand, playerHand: PlayerHand) {
     this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
 
-    const straightFlush = this.isStraightFlush(boardHand, playerHand);
+    const straightFlush = this.getStraightFlushFromContext(context);
     if (straightFlush) {
       return straightFlush;
     }
 
-    const fourOfAKind = this.isFourOfAKind(boardHand, playerHand);
+    const fourOfAKind = this.getFourOfAKindFromContext(context);
     if (fourOfAKind) {
       return [...fourOfAKind.quads, fourOfAKind.kicker];
     }
 
-    const fullHouse = this.isFullHouse(boardHand, playerHand);
+    const fullHouse = this.getFullHouseFromContext(context);
     if (fullHouse) {
       return fullHouse;
     }
 
-    const flush = this.isFlush(boardHand, playerHand);
+    const flush = this.getFlushFromContext(context);
     if (flush) {
       return flush;
     }
 
-    const straight = this.isStraight(boardHand, playerHand);
+    const straight = this.getStraightFromContext(context);
     if (straight) {
       return straight;
     }
 
-    const threeOfAKind = this.isThreeOfAKind(boardHand, playerHand);
+    const threeOfAKind = this.getThreeOfAKindFromContext(context);
     if (threeOfAKind) {
       return threeOfAKind;
     }
 
-    const twoPair = this.isTwoPair(boardHand, playerHand);
+    const twoPair = this.getTwoPairFromContext(context);
     if (twoPair) {
       return twoPair;
     }
 
-    const onePair = this.isOnePair(boardHand, playerHand);
+    const onePair = this.getOnePairFromContext(context);
     if (onePair) {
       return onePair;
     }
 
-    return this.isBestCard(boardHand, playerHand);
+    return this.getBestCardFromContext(context);
   }
 
   isFourOfAKind(
@@ -75,91 +85,110 @@ export class HandClass implements HandInterface {
     playerHand: PlayerHand,
   ): { quads: Card[]; kicker: Card } | null {
     this.areHandValid(boardHand, playerHand);
-
-    const allCards = [...boardHand, ...playerHand];
-    const rankCounts = new Map<number, number>();
-
-    for (const card of allCards) {
-      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
-    }
-
-    let quadRank: number | null = null;
-    for (const [rank, count] of rankCounts.entries()) {
-      if (count === 4) {
-        if (quadRank === null || rank > quadRank) {
-          quadRank = rank;
-        }
-      }
-    }
-
-    if (quadRank === null) {
-      return null;
-    }
-
-    const quads = allCards.filter((card) => card.rank === quadRank);
-    const kicker = allCards
-      .filter((card) => card.rank !== quadRank)
-      .sort((a, b) => b.rank - a.rank)[0];
-
-    if (!kicker) {
-      return null;
-    }
-
-    return { quads, kicker };
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getFourOfAKindFromContext(context);
   }
 
   isFullHouse(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
     this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
-    const rankCounts = new Map<number, number>();
-
-    for (const card of allCards) {
-      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
-    }
-
-    const triples = Array.from(rankCounts.entries())
-      .filter(([, count]) => count >= 3)
-      .map(([rank]) => rank)
-      .sort((a, b) => b - a);
-
-    if (triples.length === 0) {
-      return null;
-    }
-
-    const bestTripleRank = triples[0]!;
-    const pairRanks = Array.from(rankCounts.entries())
-      .filter(([rank, count]) => rank !== bestTripleRank && count >= 2)
-      .map(([rank]) => rank)
-      .sort((a, b) => b - a);
-
-    if (pairRanks.length === 0) {
-      return null;
-    }
-
-    const bestPairRank = pairRanks[0]!;
-    const tripleCards = allCards
-      .filter((card) => card.rank === bestTripleRank)
-      .slice(0, 3);
-    const pairCards = allCards
-      .filter((card) => card.rank === bestPairRank)
-      .slice(0, 2);
-
-    if (tripleCards.length !== 3 || pairCards.length !== 2) {
-      return null;
-    }
-
-    return [...tripleCards, ...pairCards];
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getFullHouseFromContext(context);
   }
 
   isStraightFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
     this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getStraightFlushFromContext(context);
+  }
+
+  isFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getFlushFromContext(context);
+  }
+
+  isStraight(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getStraightFromContext(context);
+  }
+
+  isThreeOfAKind(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getThreeOfAKindFromContext(context);
+  }
+
+  isTwoPair(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getTwoPairFromContext(context);
+  }
+
+  isOnePair(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getOnePairFromContext(context);
+  }
+
+  isBestCard(boardHand: BoardHand, playerHand: PlayerHand): Deck {
+    this.areHandValid(boardHand, playerHand);
+    const context = this.buildContext(boardHand, playerHand);
+    return this.getBestCardFromContext(context);
+  }
+
+  private buildContext(boardHand: BoardHand, playerHand: PlayerHand): HandContext {
     const allCards = [...boardHand, ...playerHand];
+    const rankCounts = new Map<number, number>();
+    const cardsByRank = new Map<number, Card[]>();
+    const cardsBySuit = new Map<Suit, Card[]>([
+      [Suit.Clubs, []],
+      [Suit.Diamonds, []],
+      [Suit.Hearts, []],
+      [Suit.Spades, []],
+    ]);
+
+    for (const card of allCards) {
+      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
+      const rankCards = cardsByRank.get(card.rank);
+      if (rankCards) {
+        rankCards.push(card);
+      } else {
+        cardsByRank.set(card.rank, [card]);
+      }
+
+      const suitCards = cardsBySuit.get(card.suit);
+      if (suitCards) {
+        suitCards.push(card);
+      }
+    }
+
+    const cardsBySuitSorted = new Map<Suit, Card[]>();
+    for (const [suit, suitCards] of cardsBySuit.entries()) {
+      cardsBySuitSorted.set(
+        suit,
+        [...suitCards].sort((a, b) => b.rank - a.rank),
+      );
+    }
+
+    const sortedByRankDesc = [...allCards].sort((a, b) => b.rank - a.rank);
+
+    return {
+      allCards,
+      rankCounts,
+      cardsByRank,
+      cardsBySuit,
+      cardsBySuitSorted,
+      sortedByRankDesc,
+    };
+  }
+
+  private getStraightFlushFromContext(context: HandContext): Deck | null {
     let bestHand: Deck | null = null;
     let bestHighRank = 0;
 
     for (const suit of [Suit.Clubs, Suit.Diamonds, Suit.Hearts, Suit.Spades]) {
-      const suitCards = allCards.filter((c) => c.suit === suit);
-
+      const suitCards = context.cardsBySuit.get(suit) ?? [];
       if (suitCards.length >= 5) {
         const straight = this.getBestStraightFromCards(suitCards);
         if (straight) {
@@ -175,17 +204,74 @@ export class HandClass implements HandInterface {
     return bestHand;
   }
 
-  isFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
-    this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
+  private getFourOfAKindFromContext(
+    context: HandContext,
+  ): { quads: Card[]; kicker: Card } | null {
+    let quadRank: number | null = null;
+    for (const [rank, count] of context.rankCounts.entries()) {
+      if (count === 4) {
+        if (quadRank === null || rank > quadRank) {
+          quadRank = rank;
+        }
+      }
+    }
+
+    if (quadRank === null) {
+      return null;
+    }
+
+    const quads = context.cardsByRank.get(quadRank) ?? [];
+    const kicker = context.sortedByRankDesc.find(
+      (card) => card.rank !== quadRank,
+    );
+
+    if (!kicker || quads.length < 4) {
+      return null;
+    }
+
+    return { quads: quads.slice(0, 4), kicker };
+  }
+
+  private getFullHouseFromContext(context: HandContext): Deck | null {
+    const triples = Array.from(context.rankCounts.entries())
+      .filter(([, count]) => count >= 3)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (triples.length === 0) {
+      return null;
+    }
+
+    const bestTripleRank = triples[0]!;
+    const pairRanks = Array.from(context.rankCounts.entries())
+      .filter(([rank, count]) => rank !== bestTripleRank && count >= 2)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (pairRanks.length === 0) {
+      return null;
+    }
+
+    const bestPairRank = pairRanks[0]!;
+    const tripleCards = (context.cardsByRank.get(bestTripleRank) ?? []).slice(
+      0,
+      3,
+    );
+    const pairCards = (context.cardsByRank.get(bestPairRank) ?? []).slice(0, 2);
+
+    if (tripleCards.length !== 3 || pairCards.length !== 2) {
+      return null;
+    }
+
+    return [...tripleCards, ...pairCards];
+  }
+
+  private getFlushFromContext(context: HandContext): Deck | null {
     let bestFlush: Deck | null = null;
     let bestRanks: number[] | null = null;
 
     for (const suit of [Suit.Clubs, Suit.Diamonds, Suit.Hearts, Suit.Spades]) {
-      const suitCards = allCards
-        .filter((card) => card.suit === suit)
-        .sort((a, b) => b.rank - a.rank);
-
+      const suitCards = context.cardsBySuitSorted.get(suit) ?? [];
       if (suitCards.length >= 5) {
         const flushHand = suitCards.slice(0, 5);
         const flushRanks = flushHand.map((card) => card.rank);
@@ -200,22 +286,12 @@ export class HandClass implements HandInterface {
     return bestFlush;
   }
 
-  isStraight(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
-    this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
-    return this.getBestStraightFromCards(allCards);
+  private getStraightFromContext(context: HandContext): Deck | null {
+    return this.getBestStraightFromCards(context.allCards);
   }
 
-  isThreeOfAKind(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
-    this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
-    const rankCounts = new Map<number, number>();
-
-    for (const card of allCards) {
-      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
-    }
-
-    const tripleRanks = Array.from(rankCounts.entries())
+  private getThreeOfAKindFromContext(context: HandContext): Deck | null {
+    const tripleRanks = Array.from(context.rankCounts.entries())
       .filter(([, count]) => count >= 3)
       .map(([rank]) => rank)
       .sort((a, b) => b - a);
@@ -225,17 +301,17 @@ export class HandClass implements HandInterface {
     }
 
     const bestTripleRank = tripleRanks[0]!;
-    const tripleCards = allCards
-      .filter((card) => card.rank === bestTripleRank)
-      .slice(0, 3);
+    const tripleCards = (context.cardsByRank.get(bestTripleRank) ?? []).slice(
+      0,
+      3,
+    );
 
     if (tripleCards.length !== 3) {
       return null;
     }
 
-    const kickers = allCards
+    const kickers = context.sortedByRankDesc
       .filter((card) => card.rank !== bestTripleRank)
-      .sort((a, b) => b.rank - a.rank)
       .slice(0, 2);
 
     if (kickers.length !== 2) {
@@ -245,16 +321,8 @@ export class HandClass implements HandInterface {
     return [...tripleCards, ...kickers];
   }
 
-  isTwoPair(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
-    this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
-    const rankCounts = new Map<number, number>();
-
-    for (const card of allCards) {
-      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
-    }
-
-    const pairRanks = Array.from(rankCounts.entries())
+  private getTwoPairFromContext(context: HandContext): Deck | null {
+    const pairRanks = Array.from(context.rankCounts.entries())
       .filter(([, count]) => count >= 2)
       .map(([rank]) => rank)
       .sort((a, b) => b - a);
@@ -264,13 +332,9 @@ export class HandClass implements HandInterface {
     }
 
     const bestPairRanks = pairRanks.slice(0, 2);
-    const pairCards = allCards.filter((card) =>
-      bestPairRanks.includes(card.rank),
-    );
-
     const selectedPairs: Card[] = [];
     for (const rank of bestPairRanks) {
-      const cardsForRank = pairCards.filter((card) => card.rank === rank);
+      const cardsForRank = context.cardsByRank.get(rank) ?? [];
       selectedPairs.push(...cardsForRank.slice(0, 2));
     }
 
@@ -278,9 +342,9 @@ export class HandClass implements HandInterface {
       return null;
     }
 
-    const kicker = allCards
-      .filter((card) => !bestPairRanks.includes(card.rank))
-      .sort((a, b) => b.rank - a.rank)[0];
+    const kicker = context.sortedByRankDesc.find(
+      (card) => !bestPairRanks.includes(card.rank),
+    );
 
     if (!kicker) {
       return null;
@@ -289,16 +353,8 @@ export class HandClass implements HandInterface {
     return [...selectedPairs, kicker];
   }
 
-  isOnePair(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
-    this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
-    const rankCounts = new Map<number, number>();
-
-    for (const card of allCards) {
-      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
-    }
-
-    const pairRanks = Array.from(rankCounts.entries())
+  private getOnePairFromContext(context: HandContext): Deck | null {
+    const pairRanks = Array.from(context.rankCounts.entries())
       .filter(([, count]) => count >= 2)
       .map(([rank]) => rank)
       .sort((a, b) => b - a);
@@ -308,17 +364,14 @@ export class HandClass implements HandInterface {
     }
 
     const bestPairRank = pairRanks[0]!;
-    const pairCards = allCards
-      .filter((card) => card.rank === bestPairRank)
-      .slice(0, 2);
+    const pairCards = (context.cardsByRank.get(bestPairRank) ?? []).slice(0, 2);
 
     if (pairCards.length !== 2) {
       return null;
     }
 
-    const kickers = allCards
+    const kickers = context.sortedByRankDesc
       .filter((card) => card.rank !== bestPairRank)
-      .sort((a, b) => b.rank - a.rank)
       .slice(0, 3);
 
     if (kickers.length !== 3) {
@@ -328,11 +381,8 @@ export class HandClass implements HandInterface {
     return [...pairCards, ...kickers];
   }
 
-  isBestCard(boardHand: BoardHand, playerHand: PlayerHand): Deck {
-    this.areHandValid(boardHand, playerHand);
-    const allCards = [...boardHand, ...playerHand];
-
-    return allCards.sort((a, b) => b.rank - a.rank).slice(0, 5);
+  private getBestCardFromContext(context: HandContext): Deck {
+    return context.sortedByRankDesc.slice(0, 5);
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
