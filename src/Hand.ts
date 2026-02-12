@@ -37,6 +37,16 @@ export class HandClass implements HandInterface {
       return [...fourOfAKind.quads, fourOfAKind.kicker];
     }
 
+    const fullHouse = this.isFullHouse(boardHand, playerHand);
+    if (fullHouse) {
+      return fullHouse;
+    }
+
+    const flush = this.isFlush(boardHand, playerHand);
+    if (flush) {
+      return flush;
+    }
+
     return boardHand;
   }
 
@@ -78,25 +88,48 @@ export class HandClass implements HandInterface {
     return { quads, kicker };
   }
 
-    isFullHouse(boardHand: BoardHand, playerHand: PlayerHand): boolean {
-        const allCards = [...boardHand, ...playerHand];
+  isFullHouse(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    const rankCounts = new Map<number, number>();
 
-        const counts: { [key: number]: number } = {};
-        allCards.forEach(card => {
-            counts[card.rank] = (counts[card.rank] || 0) + 1;
-        });
-
-        const countsValues = Object.values(counts);
-
-        if (countsValues.some(count => count === 4)) {
-            return false;
-        }
-
-        const threeCount = countsValues.filter(count => count >= 3).length;
-        const pairCount = countsValues.filter(count => count >= 2).length;
-
-        return threeCount >= 1 && pairCount >= 2;
+    for (const card of allCards) {
+      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
     }
+
+    const triples = Array.from(rankCounts.entries())
+      .filter(([, count]) => count >= 3)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (triples.length === 0) {
+      return null;
+    }
+
+    const bestTripleRank = triples[0]!;
+    const pairRanks = Array.from(rankCounts.entries())
+      .filter(([rank, count]) => rank !== bestTripleRank && count >= 2)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (pairRanks.length === 0) {
+      return null;
+    }
+
+    const bestPairRank = pairRanks[0]!;
+    const tripleCards = allCards
+      .filter((card) => card.rank === bestTripleRank)
+      .slice(0, 3);
+    const pairCards = allCards
+      .filter((card) => card.rank === bestPairRank)
+      .slice(0, 2);
+
+    if (tripleCards.length !== 3 || pairCards.length !== 2) {
+      return null;
+    }
+
+    return [...tripleCards, ...pairCards];
+  }
 
   isStraightFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
     this.areHandValid(boardHand, playerHand);
@@ -120,6 +153,31 @@ export class HandClass implements HandInterface {
     }
 
     return bestHand;
+  }
+
+  isFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    let bestFlush: Deck | null = null;
+    let bestRanks: number[] | null = null;
+
+    for (const suit of [Suit.Clubs, Suit.Diamonds, Suit.Hearts, Suit.Spades]) {
+      const suitCards = allCards
+        .filter((card) => card.suit === suit)
+        .sort((a, b) => b.rank - a.rank);
+
+      if (suitCards.length >= 5) {
+        const flushHand = suitCards.slice(0, 5);
+        const flushRanks = flushHand.map((card) => card.rank);
+
+        if (!bestRanks || this.isBetterFlush(flushRanks, bestRanks)) {
+          bestRanks = flushRanks;
+          bestFlush = flushHand;
+        }
+      }
+    }
+
+    return bestFlush;
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
@@ -187,6 +245,19 @@ export class HandClass implements HandInterface {
       ranks[4] === Rank.Ace;
 
     return isWheel ? Rank.Five : (ranks[ranks.length - 1] ?? 0);
+  }
+
+  private isBetterFlush(candidate: number[], current: number[]): boolean {
+    for (let i = 0; i < 5; i++) {
+      const candidateRank = candidate[i] ?? 0;
+      const currentRank = current[i] ?? 0;
+
+      if (candidateRank !== currentRank) {
+        return candidateRank > currentRank;
+      }
+    }
+
+    return false;
   }
 
   areHandValid(boardHand: BoardHand, playerHand: PlayerHand): boolean {
