@@ -57,6 +57,11 @@ export class HandClass implements HandInterface {
       return threeOfAKind;
     }
 
+    const twoPair = this.isTwoPair(boardHand, playerHand);
+    if (twoPair) {
+      return twoPair;
+    }
+
     return boardHand;
   }
 
@@ -233,6 +238,50 @@ export class HandClass implements HandInterface {
     }
 
     return [...tripleCards, ...kickers];
+  }
+
+  isTwoPair(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    const rankCounts = new Map<number, number>();
+
+    for (const card of allCards) {
+      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
+    }
+
+    const pairRanks = Array.from(rankCounts.entries())
+      .filter(([, count]) => count >= 2)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (pairRanks.length < 2) {
+      return null;
+    }
+
+    const bestPairRanks = pairRanks.slice(0, 2);
+    const pairCards = allCards.filter((card) =>
+      bestPairRanks.includes(card.rank),
+    );
+
+    const selectedPairs: Card[] = [];
+    for (const rank of bestPairRanks) {
+      const cardsForRank = pairCards.filter((card) => card.rank === rank);
+      selectedPairs.push(...cardsForRank.slice(0, 2));
+    }
+
+    if (selectedPairs.length !== 4) {
+      return null;
+    }
+
+    const kicker = allCards
+      .filter((card) => !bestPairRanks.includes(card.rank))
+      .sort((a, b) => b.rank - a.rank)[0];
+
+    if (!kicker) {
+      return null;
+    }
+
+    return [...selectedPairs, kicker];
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
