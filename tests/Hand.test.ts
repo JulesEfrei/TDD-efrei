@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { HandClass } from "../src/Hand";
-import type { BoardHand, PlayerHand } from "../src/Deck";
+import { Rank, Suit, type BoardHand, type PlayerHand } from "../src/Deck";
 
 const hand = new HandClass();
 
@@ -65,5 +65,59 @@ describe("checkBestPlayerHand", () => {
     const player = createPlayer(2);
 
     expect(hand.checkBestPlayerHand(board, player)).toBe(board);
+  });
+});
+
+
+describe("isStraightFlush", () => {
+  it("should return true for a valid Straight Flush (Hearts 6 to 10)", () => {
+    const board: BoardHand = [
+      { rank: Rank.Six, suit: Suit.Hearts },
+      { rank: Rank.Seven, suit: Suit.Hearts },
+      { rank: Rank.Eight, suit: Suit.Hearts },
+      { rank: Rank.Nine, suit: Suit.Hearts },
+      { rank: Rank.Two, suit: Suit.Clubs },
+    ];
+
+    const player: PlayerHand = [
+      { rank: Rank.Ten, suit: Suit.Hearts },
+      { rank: Rank.Ace, suit: Suit.Spades },
+    ];
+
+    expect(hand.isStraightFlush(board, player)).toBe(true);
+  });
+
+  it("should return false for a Straight that is not a Flush", () => {
+    const board: BoardHand = [
+      { rank: Rank.Six, suit: Suit.Hearts },
+      { rank: Rank.Seven, suit: Suit.Hearts },
+      { rank: Rank.Eight, suit: Suit.Hearts },
+      { rank: Rank.Nine, suit: Suit.Hearts },
+      { rank: Rank.Two, suit: Suit.Clubs },
+    ];
+
+    const player: PlayerHand = [
+      { rank: Rank.Ten, suit: Suit.Spades },
+      { rank: Rank.Ace, suit: Suit.Diamonds },
+    ];
+
+    expect(hand.isStraightFlush(board, player)).toBe(false);
+  });
+
+  it("should return false for a Flush that is not a Straight", () => {
+    const board: BoardHand = [
+      { rank: Rank.Two, suit: Suit.Hearts },
+      { rank: Rank.Four, suit: Suit.Hearts },
+      { rank: Rank.Six, suit: Suit.Hearts },
+      { rank: Rank.Eight, suit: Suit.Hearts },
+      { rank: Rank.King, suit: Suit.Hearts },
+    ];
+
+    const player: PlayerHand = [
+      { rank: Rank.Ace, suit: Suit.Clubs },
+      { rank: Rank.Jack, suit: Suit.Spades },
+    ];
+
+    expect(hand.isStraightFlush(board, player)).toBe(false);
   });
 });
