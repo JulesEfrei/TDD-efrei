@@ -1,17 +1,15 @@
 import { DeckGenerator } from "./Deck";
-import type { Card, Deck } from "./Deck";
+import type { Card, Deck, BoardHand, PlayerHand } from "./Deck";
 
 export interface RandomPokerInterface {
   shuffleDeck: (deck: Deck) => Deck;
-  dealHand: () => Hands;
+  dealHand: () => GameHands;
 }
 
-export type Hand = Deck;
-
-export type Hands = {
-  board: Deck;
-  player1: Hand;
-  player2: Hand;
+export type GameHands = {
+  board: BoardHand;
+  player1: PlayerHand;
+  player2: PlayerHand;
 };
 
 export class RandomPoker implements RandomPokerInterface {

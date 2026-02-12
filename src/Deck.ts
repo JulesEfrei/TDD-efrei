@@ -27,6 +27,8 @@ export type Card = {
 };
 
 export type Deck = Card[];
+export type BoardHand = Deck;
+export type PlayerHand = Deck;
 
 interface DeckGeneratorInterface {
   generateDeck(): Deck;
