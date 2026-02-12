@@ -1,26 +1,70 @@
-import { Rank, Suit } from "./Deck";
-import type { BoardHand, Card, Deck, PlayerHand } from "./Deck";
+import {type BoardHand, type Deck, type PlayerHand, type Card, Suit, Rank} from "./Deck";
+
 enum HandCategories {
-    BestCard = 0,
-    OnePair = 1,
-    TwoPair = 2,
-    ThreeOfAKind = 3,
-    Straight = 4,
-    Flush = 5,
-    FullHouse = 6,
-    FourOfAKind = 7,
-    StraightFlush = 8,
+  BestCard = 0,
+  OnePair = 1,
+  TwoPair = 2,
+  ThreeOfAKind = 3,
+  Straight = 4,
+  Flush = 5,
+  FullHouse = 6,
+  FourOfAKind = 7,
+  StraightFlush = 8,
 }
 
 interface HandInterface {
-    checkBestPlayerHand: (boardHand: BoardHand, playerHand: PlayerHand) => Deck;
+  checkBestPlayerHand: (boardHand: BoardHand, playerHand: PlayerHand) => Deck;
 }
 
 export class HandClass implements HandInterface {
-    checkBestPlayerHand(boardHand: BoardHand, playerHand: PlayerHand) {
-        return boardHand;
+  checkBestPlayerHand(boardHand: BoardHand, playerHand: PlayerHand) {
+    this.areHandValid(boardHand, playerHand);
+
+    const fourOfAKind = this.isFourOfAKind(boardHand, playerHand);
+    if (fourOfAKind) {
+      return [...fourOfAKind.quads, fourOfAKind.kicker];
     }
 
+    return boardHand;
+  }
+
+  isFourOfAKind(
+    boardHand: BoardHand,
+    playerHand: PlayerHand,
+  ): { quads: Card[]; kicker: Card } | null {
+    this.areHandValid(boardHand, playerHand);
+
+    const allCards = [...boardHand, ...playerHand];
+    const rankCounts = new Map<number, number>();
+
+    for (const card of allCards) {
+      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
+    }
+
+    let quadRank: number | null = null;
+    for (const [rank, count] of rankCounts.entries()) {
+      if (count === 4) {
+        if (quadRank === null || rank > quadRank) {
+          quadRank = rank;
+        }
+      }
+    }
+
+    if (quadRank === null) {
+      return null;
+    }
+
+    const quads = allCards.filter((card) => card.rank === quadRank);
+    const kicker = allCards
+      .filter((card) => card.rank !== quadRank)
+      .sort((a, b) => b.rank - a.rank)[0];
+
+    if (!kicker) {
+      return null;
+    }
+
+    return { quads, kicker };
+  }
     isStraightFlush(boardHand: BoardHand, playerHand: PlayerHand): boolean {
         const allCards = [...boardHand, ...playerHand];
 
@@ -39,7 +83,7 @@ export class HandClass implements HandInterface {
 
     private hasStraight(cards: Card[]): boolean {
         const ranks = Array.from(new Set(cards.map(c => c.rank))).sort((a, b) => a - b);
-        
+
         for (let i = 0; i <= ranks.length - 5; i++) {
             if (ranks[i + 4]! - ranks[i]! === 4) {
                 return true;
@@ -54,30 +98,22 @@ export class HandClass implements HandInterface {
         return false;
     }
 
-    
-
-    isFourOfAKind(boardHand: BoardHand, playerHand: PlayerHand) {
-        if (boardHand.length !== 4) {
-            return true;
-        }
+  areHandValid(boardHand: BoardHand, playerHand: PlayerHand): boolean {
+    if (
+      this.isBoardHandValid(boardHand) &&
+      this.isPlayerHandValid(playerHand)
+    ) {
+      return true;
     }
 
-    areHandValid(boardHand: BoardHand, playerHand: PlayerHand): boolean {
-        if (
-            this.isBoardHandValid(boardHand) &&
-            this.isPlayerHandValid(playerHand)
-        ) {
-            return true;
-        }
+    throw new Error("Hand are invalid");
+  }
 
-        throw new Error("Hand are invalid");
-    }
+  isBoardHandValid(boardHand: BoardHand): boolean {
+    return boardHand.length === 5;
+  }
 
-    isBoardHandValid(boardHand: BoardHand): boolean {
-        return boardHand.length === 5;
-    }
-
-    isPlayerHandValid(playerHand: PlayerHand): boolean {
-        return playerHand.length === 2;
-    }
+  isPlayerHandValid(playerHand: PlayerHand): boolean {
+    return playerHand.length === 2;
+  }
 }

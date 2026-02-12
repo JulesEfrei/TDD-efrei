@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { HandClass } from "../src/Hand";
-import { Rank, Suit, type BoardHand, type PlayerHand } from "../src/Deck";
+import type { BoardHand, PlayerHand, Card } from "../src/Deck";
+import { Rank, Suit } from "../src/Deck";
 
 const hand = new HandClass();
 
@@ -9,6 +10,17 @@ const createBoard = (length: number): BoardHand =>
 
 const createPlayer = (length: number): PlayerHand =>
   Array.from({ length }, () => ({ rank: 2, suit: 0 }));
+
+const createCard = (rank: Rank, suit: Suit): Card => ({ rank, suit });
+
+const normalizeHand = (cards: Card[]) =>
+  cards
+    .map((card) => `${card.rank}-${card.suit}`)
+    .sort((a, b) => a.localeCompare(b));
+
+const expectSameCards = (actual: Card[], expected: Card[]) => {
+  expect(normalizeHand(actual)).toEqual(normalizeHand(expected));
+};
 
 describe("Hand validation", () => {
   it("returns true for valid board and player hands", () => {
@@ -60,64 +72,339 @@ describe("Board and player hand helpers", () => {
 });
 
 describe("checkBestPlayerHand", () => {
-  it("returns the board hand as-is", () => {
-    const board = createBoard(5);
+  it("returns the best high-card hand", () => {
+    const board: BoardHand = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Five, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Three, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Diamonds),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.King, Suit.Clubs),
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.Nine, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+      createCard(Rank.Five, Suit.Diamonds),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best one-pair hand", () => {
+    const board: BoardHand = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Five, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.King, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Diamonds),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.King, Suit.Clubs),
+      createCard(Rank.King, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.Nine, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best two-pair hand", () => {
+    const board: BoardHand = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Five, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.Jack, Suit.Diamonds),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Five, Suit.Hearts),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.Jack, Suit.Diamonds),
+      createCard(Rank.Five, Suit.Diamonds),
+      createCard(Rank.Five, Suit.Hearts),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best three-of-a-kind hand", () => {
+    const board: BoardHand = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Seven, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Spades),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Seven, Suit.Clubs),
+      createCard(Rank.Nine, Suit.Diamonds),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Seven, Suit.Diamonds),
+      createCard(Rank.Seven, Suit.Hearts),
+      createCard(Rank.Seven, Suit.Clubs),
+      createCard(Rank.King, Suit.Clubs),
+      createCard(Rank.Jack, Suit.Spades),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best straight", () => {
+    const board: BoardHand = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Three, Suit.Diamonds),
+      createCard(Rank.Four, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Spades),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Five, Suit.Hearts),
+      createCard(Rank.Six, Suit.Diamonds),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Three, Suit.Diamonds),
+      createCard(Rank.Four, Suit.Hearts),
+      createCard(Rank.Five, Suit.Hearts),
+      createCard(Rank.Six, Suit.Diamonds),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best flush", () => {
+    const board: BoardHand = [
+      createCard(Rank.Ace, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.Six, Suit.Hearts),
+      createCard(Rank.Three, Suit.Hearts),
+      createCard(Rank.Two, Suit.Hearts),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.King, Suit.Hearts),
+      createCard(Rank.Seven, Suit.Clubs),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Ace, Suit.Hearts),
+      createCard(Rank.King, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.Six, Suit.Hearts),
+      createCard(Rank.Three, Suit.Hearts),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best full house", () => {
+    const board: BoardHand = [
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Two, Suit.Diamonds),
+      createCard(Rank.Two, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Spades),
+      createCard(Rank.King, Suit.Clubs),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Diamonds),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Nine, Suit.Spades),
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Diamonds),
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.Two, Suit.Diamonds),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best four-of-a-kind hand", () => {
+    const board: BoardHand = [
+      createCard(Rank.Eight, Suit.Clubs),
+      createCard(Rank.Eight, Suit.Diamonds),
+      createCard(Rank.Eight, Suit.Hearts),
+      createCard(Rank.King, Suit.Spades),
+      createCard(Rank.Two, Suit.Clubs),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Eight, Suit.Spades),
+      createCard(Rank.Ace, Suit.Diamonds),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Eight, Suit.Clubs),
+      createCard(Rank.Eight, Suit.Diamonds),
+      createCard(Rank.Eight, Suit.Hearts),
+      createCard(Rank.Eight, Suit.Spades),
+      createCard(Rank.Ace, Suit.Diamonds),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("returns the best straight flush", () => {
+    const board: BoardHand = [
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.Ten, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Hearts),
+      createCard(Rank.Two, Suit.Clubs),
+      createCard(Rank.King, Suit.Diamonds),
+    ];
+    const player: PlayerHand = [
+      createCard(Rank.Queen, Suit.Hearts),
+      createCard(Rank.Eight, Suit.Hearts),
+    ];
+
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const expected = [
+      createCard(Rank.Eight, Suit.Hearts),
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.Ten, Suit.Hearts),
+      createCard(Rank.Jack, Suit.Hearts),
+      createCard(Rank.Queen, Suit.Hearts),
+    ];
+
+    expect(bestHand).toHaveLength(5);
+    expectSameCards(bestHand, expected);
+  });
+
+  it("throws when hands are invalid", () => {
+    const board = createBoard(4);
     const player = createPlayer(2);
 
-    expect(hand.checkBestPlayerHand(board, player)).toBe(board);
+    expect(() => hand.checkBestPlayerHand(board, player)).toThrow(
+      "Hand are invalid",
+    );
   });
 });
 
-
-describe("isStraightFlush", () => {
-  it("should return true for a valid Straight Flush (Hearts 6 to 10)", () => {
+describe("isFourOfAKind", () => {
+  it("returns true when four cards share a rank", () => {
     const board: BoardHand = [
-      { rank: Rank.Six, suit: Suit.Hearts },
-      { rank: Rank.Seven, suit: Suit.Hearts },
-      { rank: Rank.Eight, suit: Suit.Hearts },
-      { rank: Rank.Nine, suit: Suit.Hearts },
-      { rank: Rank.Two, suit: Suit.Clubs },
+      createCard(Rank.Nine, Suit.Clubs),
+      createCard(Rank.Nine, Suit.Diamonds),
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.King, Suit.Spades),
+      createCard(Rank.Two, Suit.Clubs),
     ];
-
     const player: PlayerHand = [
-      { rank: Rank.Ten, suit: Suit.Hearts },
-      { rank: Rank.Ace, suit: Suit.Spades },
+      createCard(Rank.Nine, Suit.Spades),
+      createCard(Rank.Ace, Suit.Diamonds),
     ];
 
-    expect(hand.isStraightFlush(board, player)).toBe(true);
+    expect(hand.areHandValid(board, player)).toBe(true);
+    const result = hand.isFourOfAKind(board, player);
+
+    expect(result).not.toBeNull();
+    expect(result?.quads).toHaveLength(4);
+    expect(result?.kicker.rank).toBe(Rank.Ace);
   });
 
-  it("should return false for a Straight that is not a Flush", () => {
+  it("returns false when no four of a kind exists", () => {
     const board: BoardHand = [
-      { rank: Rank.Six, suit: Suit.Hearts },
-      { rank: Rank.Seven, suit: Suit.Hearts },
-      { rank: Rank.Eight, suit: Suit.Hearts },
-      { rank: Rank.Nine, suit: Suit.Hearts },
-      { rank: Rank.Two, suit: Suit.Clubs },
+      createCard(Rank.Ten, Suit.Clubs),
+      createCard(Rank.Ten, Suit.Diamonds),
+      createCard(Rank.Ten, Suit.Hearts),
+      createCard(Rank.King, Suit.Spades),
+      createCard(Rank.Two, Suit.Clubs),
     ];
-
     const player: PlayerHand = [
-      { rank: Rank.Ten, suit: Suit.Spades },
-      { rank: Rank.Ace, suit: Suit.Diamonds },
+      createCard(Rank.Nine, Suit.Spades),
+      createCard(Rank.Ace, Suit.Diamonds),
     ];
 
-    expect(hand.isStraightFlush(board, player)).toBe(false);
+    expect(hand.areHandValid(board, player)).toBe(true);
+    expect(hand.isFourOfAKind(board, player)).toBeNull();
   });
 
-  it("should return false for a Flush that is not a Straight", () => {
+  it("throws when hands are invalid", () => {
+    const board = createBoard(4);
+    const player = createPlayer(2);
+
+    expect(() => hand.isFourOfAKind(board, player)).toThrow(
+      "Hand are invalid",
+    );
+  });
+});
+
+describe("checkBestPlayerHand four of a kind", () => {
+  it("returns the best 5-card hand when four of a kind exists", () => {
     const board: BoardHand = [
-      { rank: Rank.Two, suit: Suit.Hearts },
-      { rank: Rank.Four, suit: Suit.Hearts },
-      { rank: Rank.Six, suit: Suit.Hearts },
-      { rank: Rank.Eight, suit: Suit.Hearts },
-      { rank: Rank.King, suit: Suit.Hearts },
+      createCard(Rank.Nine, Suit.Clubs),
+      createCard(Rank.Nine, Suit.Diamonds),
+      createCard(Rank.Nine, Suit.Hearts),
+      createCard(Rank.King, Suit.Spades),
+      createCard(Rank.Two, Suit.Clubs),
     ];
-
     const player: PlayerHand = [
-      { rank: Rank.Ace, suit: Suit.Clubs },
-      { rank: Rank.Jack, suit: Suit.Spades },
+      createCard(Rank.Nine, Suit.Spades),
+      createCard(Rank.Ace, Suit.Diamonds),
     ];
 
-    expect(hand.isStraightFlush(board, player)).toBe(false);
+    expect(hand.areHandValid(board, player)).toBe(true);
+
+    const bestHand = hand.checkBestPlayerHand(board, player);
+    const nineCount = bestHand.filter((card) => card.rank === Rank.Nine).length;
+    const hasAce = bestHand.some((card) => card.rank === Rank.Ace);
+
+    expect(bestHand).toHaveLength(5);
+    expect(nineCount).toBe(4);
+    expect(hasAce).toBe(true);
   });
 });
