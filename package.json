@@ -2,11 +2,16 @@
   "name": "tdd-efrei",
   "module": "index.ts",
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "^1.3.9",
+    "@vitest/coverage-v8": "4.0.18",
     "vitest": "^4.0.18"
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "scripts": {
+    "test": "vitest",
+    "test:coverage": "vitest --coverage"
   },
   "private": true,
   "type": "module"
