@@ -1,4 +1,11 @@
-import {type BoardHand, type Deck, type PlayerHand, type Card, Suit, Rank} from "./Deck";
+import {
+  type BoardHand,
+  type Deck,
+  type PlayerHand,
+  type Card,
+  Suit,
+  Rank,
+} from "./Deck";
 
 enum HandCategories {
   BestCard = 0,
@@ -19,6 +26,11 @@ interface HandInterface {
 export class HandClass implements HandInterface {
   checkBestPlayerHand(boardHand: BoardHand, playerHand: PlayerHand) {
     this.areHandValid(boardHand, playerHand);
+
+    const straightFlush = this.isStraightFlush(boardHand, playerHand);
+    if (straightFlush) {
+      return straightFlush;
+    }
 
     const fourOfAKind = this.isFourOfAKind(boardHand, playerHand);
     if (fourOfAKind) {
@@ -65,38 +77,97 @@ export class HandClass implements HandInterface {
 
     return { quads, kicker };
   }
-    isStraightFlush(boardHand: BoardHand, playerHand: PlayerHand): boolean {
-        const allCards = [...boardHand, ...playerHand];
 
-        for (const suit of [Suit.Clubs, Suit.Diamonds, Suit.Hearts, Suit.Spades]) {
-            const suitCards = allCards.filter(c => c.suit === suit);
+  isStraightFlush(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    let bestHand: Deck | null = null;
+    let bestHighRank = 0;
 
-            if (suitCards.length >= 5) {
-                if (this.hasStraight(suitCards)) {
-                    return true;
-                }
-            }
+    for (const suit of [Suit.Clubs, Suit.Diamonds, Suit.Hearts, Suit.Spades]) {
+      const suitCards = allCards.filter((c) => c.suit === suit);
+
+      if (suitCards.length >= 5) {
+        const straight = this.getBestStraightFromCards(suitCards);
+        if (straight) {
+          const highRank = this.getStraightHighRank(straight);
+          if (highRank > bestHighRank) {
+            bestHighRank = highRank;
+            bestHand = straight;
+          }
         }
-
-        return false;
+      }
     }
 
-    private hasStraight(cards: Card[]): boolean {
-        const ranks = Array.from(new Set(cards.map(c => c.rank))).sort((a, b) => a - b);
+    return bestHand;
+  }
 
-        for (let i = 0; i <= ranks.length - 5; i++) {
-            if (ranks[i + 4]! - ranks[i]! === 4) {
-                return true;
-            }
-        }
-
-        const wheelRanks = [Rank.Ace, Rank.Two, Rank.Three, Rank.Four, Rank.Five];
-        if (wheelRanks.every(r => ranks.includes(r))) {
-            return true;
-        }
-
-        return false;
+  private getBestStraightFromCards(cards: Card[]): Deck | null {
+    const rankToCard = new Map<number, Card>();
+    for (const card of cards) {
+      if (!rankToCard.has(card.rank)) {
+        rankToCard.set(card.rank, card);
+      }
     }
+
+    const ranks = Array.from(rankToCard.keys()).sort((a, b) => a - b);
+    let bestHighRank = 0;
+
+    for (let i = 0; i <= ranks.length - 5; i++) {
+      let isStraight = true;
+      for (let j = 1; j < 5; j++) {
+        if (ranks[i + j] !== ranks[i]! + j) {
+          isStraight = false;
+          break;
+        }
+      }
+
+      if (isStraight) {
+        const highRank = ranks[i + 4]!;
+        if (highRank > bestHighRank) {
+          bestHighRank = highRank;
+        }
+      }
+    }
+
+    const wheelRanks = [Rank.Ace, Rank.Two, Rank.Three, Rank.Four, Rank.Five];
+    if (wheelRanks.every((r) => rankToCard.has(r))) {
+      bestHighRank = Math.max(bestHighRank, Rank.Five);
+    }
+
+    if (bestHighRank === 0) {
+      return null;
+    }
+
+    const straightRanks =
+      bestHighRank === Rank.Five
+        ? [Rank.Ace, Rank.Two, Rank.Three, Rank.Four, Rank.Five]
+        : [
+            bestHighRank - 4,
+            bestHighRank - 3,
+            bestHighRank - 2,
+            bestHighRank - 1,
+            bestHighRank,
+          ];
+
+    const straightCards = straightRanks
+      .map((rank) => rankToCard.get(rank))
+      .filter((card): card is Card => Boolean(card));
+
+    return straightCards.length === 5 ? straightCards : null;
+  }
+
+  private getStraightHighRank(cards: Deck): number {
+    const ranks = cards.map((card) => card.rank).sort((a, b) => a - b);
+    const isWheel =
+      ranks[0] === Rank.Two &&
+      ranks[1] === Rank.Three &&
+      ranks[2] === Rank.Four &&
+      ranks[3] === Rank.Five &&
+      ranks[4] === Rank.Ace;
+
+    return isWheel ? Rank.Five : (ranks[ranks.length - 1] ?? 0);
+  }
 
   areHandValid(boardHand: BoardHand, playerHand: PlayerHand): boolean {
     if (
