@@ -1,11 +1,11 @@
-enum Suit {
+export enum Suit {
   Clubs = 0,
   Diamonds = 1,
   Hearts = 2,
   Spades = 3,
 }
 
-enum Rank {
+export enum Rank {
   Two = 2,
   Three = 3,
   Four = 4,
@@ -30,17 +30,35 @@ export type Deck = Card[];
 
 interface DeckGeneratorInterface {
   generateDeck(): Deck;
+  generateCardsForSuit(suit: Suit): Deck;
 }
 
 export class DeckGenerator implements DeckGeneratorInterface {
   generateDeck() {
     let deck: Deck = [];
 
-    for (let suit = 0; suit < 4; suit++) {
-      for (let rank = 2; rank < 15; rank++) {
-        const card: Card = { rank: rank, suit: suit };
-        deck.push(card);
-      }
+    const suits = Object.values(Suit).filter(
+      (value): value is Suit => typeof value === "number",
+    );
+
+    for (const suit of suits) {
+      const suitDeck: Deck = this.generateCardsForSuit(suit);
+      deck.push(...suitDeck);
+    }
+
+    return deck;
+  }
+
+  generateCardsForSuit(suit: Suit): Deck {
+    let deck: Deck = [];
+
+    const ranks = Object.values(Rank).filter(
+      (value): value is Rank => typeof value === "number",
+    );
+
+    for (const rank of ranks) {
+      const card: Card = { rank: rank, suit: suit };
+      deck.push(card);
     }
 
     return deck;

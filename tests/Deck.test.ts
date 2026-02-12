@@ -1,9 +1,16 @@
 import { describe, it, expect } from "vitest";
-import { DeckGenerator } from "../src/Deck";
+import { DeckGenerator, Suit } from "../src/Deck";
 
 const deckGenerator = new DeckGenerator();
 
 describe("Generate a card game", () => {
+  describe("Generate suit deck", () => {
+    it("should generate a deck of 13 cards", () => {
+      const spadesDeck = deckGenerator.generateCardsForSuit(Suit.Spades);
+      expect(spadesDeck.length).toBe(13);
+    });
+  });
+
   it("should generate a deck of 52 cards", () => {
     const deck = deckGenerator.generateDeck();
     expect(deck.length).toBe(52);
