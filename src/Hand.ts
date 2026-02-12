@@ -52,6 +52,11 @@ export class HandClass implements HandInterface {
       return straight;
     }
 
+    const threeOfAKind = this.isThreeOfAKind(boardHand, playerHand);
+    if (threeOfAKind) {
+      return threeOfAKind;
+    }
+
     return boardHand;
   }
 
@@ -189,6 +194,45 @@ export class HandClass implements HandInterface {
     this.areHandValid(boardHand, playerHand);
     const allCards = [...boardHand, ...playerHand];
     return this.getBestStraightFromCards(allCards);
+  }
+
+  isThreeOfAKind(boardHand: BoardHand, playerHand: PlayerHand): Deck | null {
+    this.areHandValid(boardHand, playerHand);
+    const allCards = [...boardHand, ...playerHand];
+    const rankCounts = new Map<number, number>();
+
+    for (const card of allCards) {
+      rankCounts.set(card.rank, (rankCounts.get(card.rank) ?? 0) + 1);
+    }
+
+    const tripleRanks = Array.from(rankCounts.entries())
+      .filter(([, count]) => count >= 3)
+      .map(([rank]) => rank)
+      .sort((a, b) => b - a);
+
+    if (tripleRanks.length === 0) {
+      return null;
+    }
+
+    const bestTripleRank = tripleRanks[0]!;
+    const tripleCards = allCards
+      .filter((card) => card.rank === bestTripleRank)
+      .slice(0, 3);
+
+    if (tripleCards.length !== 3) {
+      return null;
+    }
+
+    const kickers = allCards
+      .filter((card) => card.rank !== bestTripleRank)
+      .sort((a, b) => b.rank - a.rank)
+      .slice(0, 2);
+
+    if (kickers.length !== 2) {
+      return null;
+    }
+
+    return [...tripleCards, ...kickers];
   }
 
   private getBestStraightFromCards(cards: Card[]): Deck | null {
